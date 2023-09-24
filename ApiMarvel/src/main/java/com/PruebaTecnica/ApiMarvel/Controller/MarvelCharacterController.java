@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.PruebaTecnica.ApiMarvel.Model.CharacterSummary;
 import com.PruebaTecnica.ApiMarvel.Model.ComicCharacterCount;
 import com.PruebaTecnica.ApiMarvel.Model.MarvelCharacter;
 import com.PruebaTecnica.ApiMarvel.Service.MarvelCharacterService;
@@ -43,8 +44,8 @@ public class MarvelCharacterController {
 	// Consulta de los personajes. Sólo su info, id, nombre, descripción y url de la
 	// imagen del personaje.
 	@GetMapping("/info")
-	public List<MarvelCharacter> getAllCharacterInfo() {
-		return marvelservice.getAllCharacterInfo();
+	public List<CharacterSummary> getAllCharacterInfo() {
+		return marvelservice.findAllCharacterSummaries();
 	}
 
 	// Borrado de un personaje.

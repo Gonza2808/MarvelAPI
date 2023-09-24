@@ -16,6 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.PruebaTecnica.ApiMarvel.Interface.IMarvelCharacterRepository;
+import com.PruebaTecnica.ApiMarvel.Model.CharacterSummary;
 import com.PruebaTecnica.ApiMarvel.Model.ComicCharacterCount;
 import com.PruebaTecnica.ApiMarvel.Model.MarvelCharacter;
 import com.PruebaTecnica.ApiMarvel.Model.MarvelComic;
@@ -34,11 +35,12 @@ public class MarvelCharacterService {
 	private IMarvelCharacterRepository iMarvelCharacter;
 	@Autowired
 	private EntityManager entityManager;
-	
+
 	// llena la bdd de la api de marvel
 	public List<MarvelCharacter> loadingBDD(List<MarvelCharacter> marvelcharacters) {
 		return iMarvelCharacter.saveAll(marvelcharacters);
 	}
+
 	// Modificación de los datos del personaje. Nombre y/o descripción.
 	public MarvelCharacter updateCharacterInfo(int characterId, String newName, String newDescription) {
 		Optional<MarvelCharacter> characterOptional = iMarvelCharacter.findById(characterId);
@@ -56,6 +58,7 @@ public class MarvelCharacterService {
 			throw new EntityNotFoundException("Character with ID " + characterId + " not found");
 		}
 	}
+
 	// Creación de nuevo personaje.
 	public MarvelCharacter createCharacter(String name, String description, String imageUrl) {
 		MarvelCharacter character = new MarvelCharacter();
@@ -65,6 +68,7 @@ public class MarvelCharacterService {
 
 		return iMarvelCharacter.save(character);
 	}
+
 	// Borrado de un personaje.
 	public void deleteCharacter(int characterId) {
 		Optional<MarvelCharacter> characterOptional = iMarvelCharacter.findById(characterId);
@@ -76,22 +80,24 @@ public class MarvelCharacterService {
 		}
 	}
 
-	public List<Map<String, Object>> findAllCharactersWithSelectedFields() {
-        List<MarvelCharacter> characters = iMarvelCharacter.findAll();
-        return characters.stream()
-                .map(this::mapToCharacterFields)
-                .collect(Collectors.toList());
-    }
+	// Consulta de los personajes. Sólo su info, id, nombre, descripción y url de la
+	// imagen del personaje.
+	public List<CharacterSummary> findAllCharacterSummaries() {
+		List<MarvelCharacter> characters = iMarvelCharacter.findAll();
+		return characters.stream().map(this::mapToCharacterSummary).collect(Collectors.toList());
+	}
 
-    private Map<String, Object> mapToCharacterFields(MarvelCharacter character) {
-        Map<String, Object> characterFields = new HashMap<>();
-        characterFields.put("id", character.getId());
-        characterFields.put("name", character.getName());
-        characterFields.put("description", character.getDescription());
-        characterFields.put("path", character.getPath());
-        return characterFields;
-    }
-	//Consulta del detalle de un personaje que incluya los comics en los que aparece. Recibirá el id del personaje.
+	private CharacterSummary mapToCharacterSummary(MarvelCharacter character) {
+		CharacterSummary summary = new CharacterSummary();
+		summary.setId(character.getId());
+		summary.setName(character.getName());
+		summary.setDescription(character.getDescription());
+		summary.setPath(character.getPath());
+		return summary;
+	}
+
+	// Consulta del detalle de un personaje que incluya los comics en los que
+	// aparece. Recibirá el id del personaje.
 	public MarvelCharacter findCharacterByIdWithComics(int characterId) {
 		Optional<MarvelCharacter> characterOptional = iMarvelCharacter.findById(characterId);
 
@@ -103,36 +109,30 @@ public class MarvelCharacterService {
 			throw new EntityNotFoundException("Character with ID " + characterId + " not found");
 		}
 	}
-	
+
 	public List<ComicCharacterCount> findTopNComicsWithMostCharacters(int n) {
-	    String sql = "SELECT MC.ID AS comic_id, MC.NAME AS comic_name, C.NAME AS character_name, C.ID AS character_id, COUNT(MC.CHARACTER_ID) AS character_count " +
-	                 "FROM MARVELCOMIC MC " +
-	                 "LEFT JOIN MARVELCHARACTERS C ON MC.CHARACTER_ID = C.ID " +
-	                 "GROUP BY MC.ID, MC.NAME, C.NAME, C.ID " +
-	                 "ORDER BY character_count DESC " +
-	                 "LIMIT :n";
+		String sql = "SELECT MC.ID AS comic_id, MC.NAME AS comic_name, C.NAME AS character_name, C.ID AS character_id, COUNT(MC.CHARACTER_ID) AS character_count "
+				+ "FROM MARVELCOMIC MC " + "LEFT JOIN MARVELCHARACTERS C ON MC.CHARACTER_ID = C.ID "
+				+ "GROUP BY MC.ID, MC.NAME, C.NAME, C.ID " + "ORDER BY character_count DESC " + "LIMIT :n";
 
-	    List<Object[]> resultList = entityManager.createNativeQuery(sql)
-	            .setParameter("n", n)
-	            .getResultList();
+		List<Object[]> resultList = entityManager.createNativeQuery(sql).setParameter("n", n).getResultList();
 
-	    List<ComicCharacterCount> result = new ArrayList<>();
+		List<ComicCharacterCount> result = new ArrayList<>();
 
-	    for (Object[] rowResult : resultList) {
-	        ComicCharacterCount comicCharacterCount = new ComicCharacterCount();
-	        comicCharacterCount.setComicId(((Number) rowResult[0]).longValue());
-	        comicCharacterCount.setComicName((String) rowResult[1]);
+		for (Object[] rowResult : resultList) {
+			ComicCharacterCount comicCharacterCount = new ComicCharacterCount();
+			comicCharacterCount.setComicId(((Number) rowResult[0]).longValue());
+			comicCharacterCount.setComicName((String) rowResult[1]);
 
-	        comicCharacterCount.setCharacterId(((Long) rowResult[3]).longValue());
-	        comicCharacterCount.setCharacterName((String) rowResult[2]);
-	        comicCharacterCount.setCharacterCount(((Number) rowResult[4]).longValue());
+			comicCharacterCount.setCharacterId(((Long) rowResult[3]).longValue());
+			comicCharacterCount.setCharacterName((String) rowResult[2]);
+			comicCharacterCount.setCharacterCount(((Number) rowResult[4]).longValue());
 
-	        result.add(comicCharacterCount);
-	    }
+			result.add(comicCharacterCount);
+		}
 
-	    return result;
+		return result;
 	}
-
 
 	public StringBuilder init() {
 		StringBuilder response = new StringBuilder();
